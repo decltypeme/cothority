@@ -56,6 +56,18 @@ func (c *Client) StoreConfig(dst network.Address, p *PopDesc, priv kyber.Scalar)
 	return nil
 }
 
+// GetProposals asks the conode if there is any proposed description waiting
+// to be confirmed.
+func (c *Client) GetProposals(dst network.Address) ([]PopDesc, error) {
+	si := &network.ServerIdentity{Address: dst}
+	rep := &GetProposalsReply{}
+	err := c.SendProtobuf(si, &GetProposals{}, rep)
+	if err != nil {
+		return nil, err
+	}
+	return rep.Proposals, nil
+}
+
 // FetchFinal sends Request to update local final statement
 func (c *Client) FetchFinal(dst network.Address, hash []byte) (
 	*FinalStatement, error) {
@@ -211,6 +223,20 @@ func encodeMapFinal(stmts map[string]*FinalStatement) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// ToToml returns a string that can be decoded using toml.
+func (desc *PopDesc) ToToml() (string, error) {
+	t, err := desc.toTomlStruct()
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	err = toml.NewEncoder(&buf).Encode(t)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func (desc *PopDesc) toTomlStruct() (*popDescToml, error) {
